@@ -1,0 +1,20 @@
+<Row@BoxLayout>:
+    value: ''
+    OneLineListItem:
+        text: root.value
+
+<ChatScreen>:
+    name: 'irc_chat'
+    rv:rv
+    RecycleView:
+        id: rv
+        scroll_type: ['bars', 'content']
+        scroll_wheel_distance: dp(114)
+        bar_width: dp(4)
+        viewclass: 'Row'
+        RecycleBoxLayout:
+            default_size_hint: 1, None
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: 'vertical'
+            spacing: dp(-2)

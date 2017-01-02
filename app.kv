@@ -1,0 +1,16 @@
+#: import sm kivy.uix.screenmanager
+BoxLayout:
+    orientation: 'vertical'
+    Toolbar:
+        id: toolbar
+        title: 'Kivy IRC'
+        md_bg_color: app.theme_cls.primary_color
+        background_palette: 'Primary'
+        background_hue: '500'
+        left_action_items: [['menu', lambda x: app.nav_drawer.toggle()]]
+    ScreenManager:
+        id: scr_mngr
+        transition: sm.SlideTransition()
+        SettingScreen
+        ChatScreen
+            name: 'irc_chat'

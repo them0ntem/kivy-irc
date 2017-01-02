@@ -1,0 +1,18 @@
+<SettingScreen>:
+    name: 'settings'
+    sadfasdf: sadfasdf
+    MDRaisedButton:
+        text: "Open list bottom sheet"
+        opposite_colors: True
+        size_hint: None, None
+        size: 4 * dp(48), dp(48)
+        pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+        on_release: root.show_example_bottom_sheet()
+    MDRaisedButton:
+        text: "Open grid bottom sheet"
+        id: sadfasdf
+        opposite_colors: True
+        size_hint: None, None
+        size: 4 * dp(48), dp(48)
+        pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+        on_release: app.show_example_grid_bottom_sheet()
