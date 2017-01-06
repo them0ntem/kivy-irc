@@ -1,20 +1,41 @@
+#:import SingleLineTextField kivymd.textfields.SingleLineTextField
+#:import TwoLineListItem kivymd.list.TwoLineListItem
+
 <Row@BoxLayout>:
-    value: ''
-    OneLineListItem:
-        text: root.value
+    username: ''
+    message: ''
+    TwoLineListItem:
+        text: "@"+root.username
+        secondary_text: root.message
 
 <ChatScreen>:
     name: 'irc_chat'
-    rv:rv
-    RecycleView:
-        id: rv
-        scroll_type: ['bars', 'content']
-        scroll_wheel_distance: dp(114)
-        bar_width: dp(4)
-        viewclass: 'Row'
-        RecycleBoxLayout:
-            default_size_hint: 1, None
-            size_hint_y: None
-            height: self.minimum_height
-            orientation: 'vertical'
-            spacing: dp(-2)
+    msg_list:msg_list
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding:20
+        ScrollView:
+            do_scroll_x: False
+            scroll_wheel_distance: dp(114)
+            bar_width: dp(4)
+            MDList:
+                id: msg_list
+
+        GridLayout:
+            cols: 2
+            size_hint_y: 0.1
+            spacing: 20
+            padding: (40, 0)
+            SingleLineTextField:
+                id: irc_message
+                valign: 'bottom'
+                message: "Enter Message"
+                message_mode: "on_focus"
+            MDRaisedButton:
+                id: irc_message_send_btn
+                text: "Send"
+                opposite_colors: True
+                size: 4 * dp(24), dp(40)
+                pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+                on_release: root.send_message()
