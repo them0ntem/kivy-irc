@@ -70,5 +70,5 @@ class ChatScreen(Screen):
     def __post_joined__(self, connection):
         self.ids.irc_message.disabled = False
         self.ids.irc_message_send_btn.disabled = False
-        self.ids.irc_message._hint_lbl.text = '@manthansharma'
+        self.ids.irc_message._hint_lbl.text = '@'+self.app.config.get('irc', 'nickname')
         self.app.connection.on_message(self.on_message)
