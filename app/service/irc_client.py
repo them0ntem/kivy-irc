@@ -52,12 +52,12 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
 
     def __init__(self):
         self._namescallback = {}
-        self._privmsgcallback = []
+        self._privmsgcallback = {}
+        self._userjoinedcallback = {}
         Clock.schedule_once(self.__post_init__)
 
     def __post_init__(self, *args):
         self.channel = self.factory.channel
-        print(self.nickname)
 
     def connectionMade(self):
         self.nickname = self.factory.nickname
@@ -80,27 +80,52 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         Logger.info("IRC: I have joined %s" % channel)
         self.factory.app.on_joined(self)
 
+    def on_privmsg(self, channel, callback):
+        channel = channel.lower()
+
+        if channel not in self._privmsgcallback:
+            self._privmsgcallback[channel] = []
+        self._privmsgcallback[channel].append(callback)
+
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
-        # user = user.split('!', 1)[0]
-        # Logger.info("IRC: <%s> %s" % (user, msg))
+        channel = channel.strip('#')
+        if channel not in self._privmsgcallback and channel != self.nickname:
+            return
 
-        for cb in self._privmsgcallback:
+        callbacks = self._privmsgcallback[channel]
+
+        for cb in callbacks:
             cb(user, channel, msg)
-        # # Check to see if they're sending me a private message
-        # if channel == self.nickname:
-        #     msg = "It isn't nice to whisper!  Play nice with the group."
-        #     self.msg(user, msg)
-        #     return
-        #
-        # # Otherwise check to see if it is a message directed at me
-        # if msg.startswith(self.nickname + ":"):
-        #     msg = "%s: I am a log bot" % user
-        #     self.msg(channel, msg)
-        #     Logger.info("IRC: <%s> %s" % (self.nickname, msg))
 
-    def on_message(self, callback):
-        self._privmsgcallback.append(callback)
+            # # Check to see if they're sending me a private message
+            # if channel == self.nickname:
+            #     msg = "It isn't nice to whisper!  Play nice with the group."
+            #     self.msg(user, msg)
+            #     return
+            #
+            # # Otherwise check to see if it is a message directed at me
+            # if msg.startswith(self.nickname + ":"):
+            #     msg = "%s: I am a log bot" % user
+            #     self.msg(channel, msg)
+            #     Logger.info("IRC: <%s> %s" % (self.nickname, msg))
+
+    def on_usr_joined(self, channel, callback):
+        channel = channel.lower()
+
+        if channel not in self._userjoinedcallback:
+            self._userjoinedcallback[channel] = []
+        self._userjoinedcallback[channel].append(callback)
+
+    def userJoined(self, user, channel):
+        channel = channel.strip('#')
+        if channel not in self._userjoinedcallback:
+            return
+
+        callbacks = self._userjoinedcallback[channel]
+
+        for cb in callbacks:
+            cb(user, channel)
 
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""
@@ -120,11 +145,11 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
             self._namescallback[channel] = ([], [])
 
         self._namescallback[channel][0].append(d)
-        self.sendLine("NAMES %s" % channel)
+        self.sendLine("NAMES %s" % "#" + channel)
         return d
 
     def irc_RPL_NAMREPLY(self, prefix, params):
-        channel = params[2].lower()
+        channel = params[2].lower().strip('#')
         nicklist = params[3].split(' ')
 
         if channel not in self._namescallback:
@@ -134,7 +159,7 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         n += nicklist
 
     def irc_RPL_ENDOFNAMES(self, prefix, params):
-        channel = params[1].lower()
+        channel = params[1].lower().strip('#')
         if channel not in self._namescallback:
             return
 

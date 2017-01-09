@@ -1,5 +1,5 @@
 from __future__ import print_function
-from __future__ import print_function
+
 from kivy.support import install_twisted_reactor
 
 install_twisted_reactor()
