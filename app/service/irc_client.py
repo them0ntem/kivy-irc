@@ -51,9 +51,11 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
     channel = None
 
     def __init__(self):
-        self._namescallback = {}
+        self._whocallback = {}
         self._privmsgcallback = {}
         self._userjoinedcallback = {}
+        self._userleftcallback = {}
+        self._userquitcallback = []
         Clock.schedule_once(self.__post_init__)
 
     def __post_init__(self, *args):
@@ -127,6 +129,35 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         for cb in callbacks:
             cb(user, channel)
 
+    def on_usr_left(self, channel, callback):
+        channel = channel.lower()
+
+        if channel not in self._userleftcallback:
+            self._userleftcallback[channel] = []
+        self._userleftcallback[channel].append(callback)
+
+    def userLeft(self, user, channel):
+        channel = channel.strip('#')
+        if channel not in self._userleftcallback:
+            return
+
+        callbacks = self._userleftcallback[channel]
+
+        for cb in callbacks:
+            cb(user, channel)
+
+    def on_usr_quit(self, callback):
+        self._userquitcallback.append(callback)
+
+    def userQuit(self, user, quit_message):
+        if not self._userquitcallback:
+            return
+
+        callbacks = self._userquitcallback
+
+        for cb in callbacks:
+            cb(user, quit_message)
+
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""
         user = user.split('!', 1)[0]
@@ -138,34 +169,37 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         new_nick = params[0]
         Logger.info("IRC: %s is now known as %s" % (old_nick, new_nick))
 
-    def names(self, channel):
+    def who(self, channel):
         channel = channel.lower()
         d = defer.Deferred()
-        if channel not in self._namescallback:
-            self._namescallback[channel] = ([], [])
+        if channel not in self._whocallback:
+            self._whocallback[channel] = ([], [])
 
-        self._namescallback[channel][0].append(d)
-        self.sendLine("NAMES %s" % "#" + channel)
+        self._whocallback[channel][0].append(d)
+        self.sendLine("WHO %s" % "#" + channel)
         return d
 
-    def irc_RPL_NAMREPLY(self, prefix, params):
-        channel = params[2].lower().strip('#')
-        nicklist = params[3].split(' ')
-
-        if channel not in self._namescallback:
-            return
-
-        n = self._namescallback[channel][1]
-        n += nicklist
-
-    def irc_RPL_ENDOFNAMES(self, prefix, params):
+    def irc_RPL_WHOREPLY(self, prefix, params):
         channel = params[1].lower().strip('#')
-        if channel not in self._namescallback:
+        if channel not in self._whocallback:
             return
 
-        callbacks, namelist = self._namescallback[channel]
+        n = self._whocallback[channel][1]
+        n.append(params)
 
+    def irc_RPL_ENDOFWHO(self, prefix, params):
+        channel = params[1].lower().strip('#')
+        if channel not in self._whocallback:
+            return
+
+        callbacks, nick_data = self._whocallback[channel]
+
+        nick_data = {x[5]: x for x in nick_data}
         for cb in callbacks:
-            cb.callback(namelist)
+            cb.callback(nick_data)
 
-        del self._namescallback[channel]
+        del self._whocallback[channel]
+
+    def irc_unknown(self, prefix, command, params):
+        """Print all unhandled replies, for debugging."""
+        print('UNKNOWN:', prefix, command, params)

@@ -6,8 +6,9 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.metrics import dp
-from kivy.properties import ObjectProperty, Logger, NumericProperty
+from kivy.properties import ObjectProperty, Logger, NumericProperty, DictProperty
 from kivy.uix.screenmanager import Screen
+from kivymd.bottomsheet import MDListBottomSheet
 from kivymd.list import BaseListItem
 
 
@@ -29,6 +30,7 @@ class MultiLineListItem(BaseListItem):
 
 class ChatScreen(Screen):
     app = ObjectProperty(None)
+    nick_data = DictProperty()
 
     def __init__(self, **kw):
         super(ChatScreen, self).__init__(**kw)
@@ -70,28 +72,60 @@ class ChatScreen(Screen):
     def on_usr_joined(self, user, channel):
         self.msg_list.add_widget(
             MultiLineListItem(
-                text="[b][color=9C27B0]" + user + "[/color][/b] -> joined",
+                text="[color=9C27B0]" + user + "[/color] has joined #" + self.app.config.get('irc', 'channel'),
                 font_style='Subhead',
             )
         )
-        self.app.connection.names("#" + self.app.config.get('irc', 'channel')).addCallback(self.names_callback)
         Logger.info("IRC: %s -> %s" % (user, 'joined'))
 
-    def names_callback(self, nicklist):
-        nicklist.sort()
-        self.nick_list.clear_widgets()
-        for nick in nicklist:
-            self.nick_list.add_widget(
-                MultiLineListItem(
-                    text=nick
-                )
+    def on_usr_left(self, user, channel):
+        self.msg_list.add_widget(
+            MultiLineListItem(
+                text="[color=9C27B0]" + user + "[/color] has left #" + self.app.config.get('irc', 'channel'),
+                font_style='Subhead',
             )
-        Logger.info("IRC: <%s> -> nicks -> %s" % (self.app.config.get('irc', 'channel'), nicklist))
+        )
+        Logger.info("IRC: %s <- %s" % (user, 'left'))
+
+    def on_usr_quit(self, user, quit_message):
+        self.msg_list.add_widget(
+            MultiLineListItem(
+                text="[color=9A2FB0]" + user + "[/color] has quit &bl;" + quit_message + "&bt;",
+                font_style='Subhead',
+            )
+        )
+        Logger.info("IRC: %s <- %s" % (user, quit_message))
+
+    def nick_details(self, nick_list_item):
+        nick_item_data = self.nick_data[nick_list_item.text]
+        bs = MDListBottomSheet()
+        bs.add_item("Whois ({})".format(nick_list_item.text), lambda x: x)
+        bs.add_item("{} ({}@{})".format(nick_item_data[7].split(' ')[1],
+                                        nick_item_data[3],
+                                        nick_item_data[2]), lambda x: x)
+        bs.add_item("{} is connected via {}".format(nick_list_item.text, nick_item_data[4]), lambda x: x)
+        bs.open()
+
+    def who_callback(self, nick_data):
+        self.nick_data = nick_data
+        nick_list = nick_data.keys()
+        nick_list.sort()
+        self.nick_list.clear_widgets()
+        for nick in nick_list:
+            list_item = MultiLineListItem(
+                text=nick
+            )
+            list_item.bind(on_press=self.nick_details)
+            self.nick_list.add_widget(list_item)
+
+        Logger.info("IRC: <%s> -> nicks -> %s" % (self.app.config.get('irc', 'channel'), nick_list))
 
     def __post_joined__(self, connection):
-        self.app.connection.names(self.app.config.get('irc', 'channel')).addCallback(self.names_callback)
+        self.app.connection.who(self.app.config.get('irc', 'channel')).addCallback(self.who_callback)
         self.ids.irc_message.disabled = False
         self.ids.irc_message_send_btn.disabled = False
         self.ids.irc_message._hint_lbl.text = '@' + self.app.config.get('irc', 'nickname')
         self.app.connection.on_privmsg(self.app.config.get('irc', 'channel'), self.on_privmsg)
         self.app.connection.on_usr_joined(self.app.config.get('irc', 'channel'), self.on_usr_joined)
+        self.app.connection.on_usr_left(self.app.config.get('irc', 'channel'), self.on_usr_left)
+        self.app.connection.on_usr_quit(self.on_usr_quit)
