@@ -1,12 +1,10 @@
-from __future__ import print_function
-
 from kivy.support import install_twisted_reactor
 
 install_twisted_reactor()
 
 from kivy.app import App
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty, Clock, Logger, StringProperty
+from kivy.properties import ObjectProperty, Clock, Logger, ListProperty
 from kivymd.navigationdrawer import NavigationDrawer
 from kivymd.theming import ThemeManager
 from twisted.internet import reactor
@@ -25,7 +23,7 @@ class NavDrawer(NavigationDrawer):
 
 class KivyIRCClient(App):
     main_widget = ObjectProperty(None)
-    channel = StringProperty('')
+    channel = ListProperty()
     config = ObjectProperty(None)
     irc_client = ObjectProperty(None)
     theme_cls = ThemeManager()
@@ -40,14 +38,14 @@ class KivyIRCClient(App):
         self.main_widget = Builder.load_file('kivy_irc.kv')
         self.nav_drawer = NavDrawer()
         self.config = self.config
-        self.channel = self.config.get('irc', 'channel')
+        self.channel = eval(self.config.get('irc', 'channel'))
         self.connect_irc()
         return self.main_widget
 
     def build_config(self, config):
         config.setdefaults('irc', {
             'nickname': 'guest',
-            'channel': '#kivy'
+            'channel': ['#kivy', '#kivy-1997']
         })
 
     def connect_irc(self):
@@ -58,13 +56,12 @@ class KivyIRCClient(App):
     def on_irc_connection(self, connection):
         Logger.info("IRC: connected successfully!")
         self.connection = connection
-
-    def call_all_screen(self):
         for screen in self.main_widget.ids.scr_mngr.screens:
-            screen.__post_joined__(self.connection)
+            screen.__post_connection__(self.connection)
 
     def on_joined(self, connection):
-        self.call_all_screen()
+        for screen in self.main_widget.ids.scr_mngr.screens:
+            screen.__post_joined__(self.connection)
 
     def on_stop(self):
         self._shutdown()

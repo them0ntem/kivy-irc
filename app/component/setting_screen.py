@@ -13,5 +13,8 @@ class SettingScreen(Screen):
     def __post_init__(self, *args):
         pass
 
+    def __post_connection__(self, connection):
+        pass
+
     def __post_joined__(self, connection):
         pass

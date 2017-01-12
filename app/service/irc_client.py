@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import time
 
 from kivy.clock import Clock
@@ -51,6 +49,7 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
     channel = None
 
     def __init__(self):
+        self._joincallback = {}
         self._whocallback = {}
         self._privmsgcallback = {}
         self._userjoinedcallback = {}
@@ -75,12 +74,25 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
 
     def signedOn(self):
         """Called when bot has successfully signed on to server."""
-        self.join(self.factory.channel)
+
+    def on_joined(self, channel, callback):
+        channel = channel.lower()
+
+        if channel not in self._joincallback:
+            self._joincallback[channel] = []
+        self._joincallback[channel].append(callback)
 
     def joined(self, channel):
         """This will get called when the bot joins the channel."""
         Logger.info("IRC: I have joined %s" % channel)
-        self.factory.app.on_joined(self)
+        channel = channel.strip('#')
+        if channel not in self._joincallback:
+            return
+
+        callbacks = self._joincallback[channel]
+
+        for cb in callbacks:
+            cb(channel)
 
     def on_privmsg(self, channel, callback):
         channel = channel.lower()

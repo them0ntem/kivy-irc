@@ -1,0 +1,47 @@
+<ChannelChatTab>:
+    msg_list:msg_list
+    nick_list:nick_list
+    irc_message:irc_message
+    irc_message_send_btn:irc_message_send_btn
+    BoxLayout:
+        orientation: 'horizontal'
+        BoxLayout:
+            orientation: 'vertical'
+            padding: 10
+            ScrollView:
+                padding: 10
+                size_hint_y: 0.9
+                scroll_wheel_distance: dp(114)
+                bar_width: dp(4)
+                MDList:
+                    id: msg_list
+            GridLayout:
+                cols: 2
+                size_hint_y: 0.1
+                spacing: 20
+                padding: (40, 0)
+                MDTextField:
+                    id: irc_message
+                    valign: 'bottom'
+                    message: "Enter Message"
+                    message_mode: "on_focus"
+                    on_text_validate: root.send_message()
+                MDRaisedButton:
+                    id: irc_message_send_btn
+                    text: "Send"
+                    opposite_colors: True
+                    size: 4 * dp(24), dp(40)
+                    pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+                    on_release: root.send_message()
+        ScrollView:
+            canvas.before:
+                Color:
+                    rgb: 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            size_hint_x: 0.3
+            scroll_wheel_distance: dp(114)
+            bar_width: dp(4)
+            MDList:
+                id: nick_list
