@@ -33,7 +33,6 @@ class ChatScreen(Screen):
 
     def __init__(self, **kw):
         super(ChatScreen, self).__init__(**kw)
-        Builder.load_file('app/template/chat_screen.kv')
         self.app = App.get_running_app()
         Clock.schedule_once(self.__post_init__)
 

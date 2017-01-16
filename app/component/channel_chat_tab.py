@@ -30,10 +30,11 @@ class MultiLineListItem(BaseListItem):
 
 class ChannelChatTab(MDTab):
     app = ObjectProperty(None)
+    irc_message = ObjectProperty(None)
+    irc_message_send_btn = ObjectProperty(None)
     nick_data = DictProperty()
 
     def __init__(self, **kw):
-        Builder.load_file('app/template/channel_chat_tab.kv')
         super(ChannelChatTab, self).__init__(**kw)
         self.app = App.get_running_app()
         Clock.schedule_once(self.__post_init__)
@@ -45,6 +46,8 @@ class ChannelChatTab(MDTab):
         self.irc_message._hint_lbl.text = 'Connecting...'
 
     def update_irc_message_text(self, dt):
+        print(self.irc_message)
+        print("update_irc_message_text")
         self.irc_message.text = ''
         self.irc_message.on_focus()
 
