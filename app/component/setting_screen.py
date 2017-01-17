@@ -1,6 +1,4 @@
-from kivy import Logger
 from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 
 

@@ -24,6 +24,7 @@ class NavDrawer(NavigationDrawer):
 class KivyIRCClient(App):
     main_widget = ObjectProperty(None)
     channel = ListProperty()
+    scr_mngr = ObjectProperty(None)
     config = ObjectProperty(None)
     irc_client = ObjectProperty(None)
     theme_cls = ThemeManager()
@@ -36,6 +37,7 @@ class KivyIRCClient(App):
 
     def build(self):
         self.main_widget = Builder.load_file('kivy_irc.kv')
+        self.scr_mngr = self.main_widget.ids.scr_mngr
         self.nav_drawer = NavDrawer()
         self.config = self.config
         self.channel = eval(self.config.get('irc', 'channel'))
@@ -56,11 +58,11 @@ class KivyIRCClient(App):
     def on_irc_connection(self, connection):
         Logger.info("IRC: connected successfully!")
         self.connection = connection
-        for screen in self.main_widget.ids.scr_mngr.screens:
+        for screen in self.scr_mngr.screens:
             screen.__post_connection__(self.connection)
 
     def on_joined(self, connection):
-        for screen in self.main_widget.ids.scr_mngr.screens:
+        for screen in self.scr_mngr.screens:
             screen.__post_joined__(self.connection)
 
     def on_stop(self):

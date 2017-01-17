@@ -2,13 +2,13 @@ from math import ceil
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.properties import ObjectProperty, NumericProperty, DictProperty
 from kivy.uix.screenmanager import Screen
 from kivymd.list import BaseListItem
 
 from app.component.channel_chat_tab import ChannelChatTab
+from app.component.private_chat_tab import PrivateChatTab
 
 
 class MultiLineListItem(BaseListItem):
@@ -52,3 +52,12 @@ class ChatScreen(Screen):
     def __post_joined__(self, connection):
         for tab in self.tab_panel.ids.tab_manager.screens:
             tab.__post_joined__(connection)
+
+    def add_channel_tab(self, name, msg):
+        self.tab_panel.add_widget(
+            PrivateChatTab(
+                name=name,
+                text=name,
+                msg=msg
+            )
+        )

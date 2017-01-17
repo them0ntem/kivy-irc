@@ -1,10 +1,9 @@
+from __future__ import print_function
+
 import time
 
-from kivy.clock import Clock
 from kivy.logger import Logger
-from twisted.internet import defer
-from twisted.internet import protocol
-from twisted.internet import reactor
+from twisted.internet import defer, protocol, reactor
 from twisted.words.protocols import irc
 
 
@@ -25,7 +24,7 @@ class IRCClientFactory(protocol.ClientFactory):
         self.connection_attempts = 0
 
     def buildProtocol(self, addr):
-        bot = IRCClient()
+        bot = IRCClient(self.app.config.get('irc', 'nickname'), self.app.config.get('irc', 'password'))
         bot.factory = self
         self.bot = bot
         self.connection_attempts = 0
@@ -45,23 +44,21 @@ class IRCClientFactory(protocol.ClientFactory):
 
 class IRCClient(irc.IRCClient, protocol.Protocol):
     """A logging IRC bot."""
-    nickname = None
     channel = None
+    _joincallback = {}
+    _whocallback = {}
+    _privmsgcallback = {}
+    _userjoinedcallback = {}
+    _userleftcallback = {}
+    _userquitcallback = []
 
-    def __init__(self):
-        self._joincallback = {}
-        self._whocallback = {}
-        self._privmsgcallback = {}
-        self._userjoinedcallback = {}
-        self._userleftcallback = {}
-        self._userquitcallback = []
-        Clock.schedule_once(self.__post_init__)
-
-    def __post_init__(self, *args):
-        self.channel = self.factory.channel
+    def __init__(self, nickname, password):
+        self.nickname = nickname
+        self.password = password
 
     def connectionMade(self):
-        self.nickname = self.factory.nickname
+        self.channel = self.factory.channel
+
         irc.IRCClient.connectionMade(self)
         Logger.info("IRC: connected at %s" %
                     time.asctime(time.localtime(time.time())))
@@ -74,13 +71,15 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
 
     def signedOn(self):
         """Called when bot has successfully signed on to server."""
+        self.sendLine("ns identify {} {}".format(self.nickname, self.password))
 
-    def on_joined(self, channel, callback):
+    def join_channel(self, channel, callback):
         channel = channel.lower()
 
         if channel not in self._joincallback:
             self._joincallback[channel] = []
         self._joincallback[channel].append(callback)
+        self.join(channel)
 
     def joined(self, channel):
         """This will get called when the bot joins the channel."""
@@ -103,26 +102,29 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
 
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
-        channel = channel.strip('#')
-        if channel not in self._privmsgcallback and channel != self.nickname:
-            return
+        if channel in self._privmsgcallback:
+            channel = channel.strip('#')
+            callbacks = self._privmsgcallback[channel]
 
-        callbacks = self._privmsgcallback[channel]
+            for cb in callbacks:
+                cb(user, channel, msg)
+        if user.split('!')[0] in self._privmsgcallback:
+            callbacks = self._privmsgcallback[user.split('!')[0]]
 
-        for cb in callbacks:
-            cb(user, channel, msg)
+            for cb in callbacks:
+                cb(user, channel, msg)
+        else:
+            if channel == self.nickname:
+                self.factory.app.scr_mngr.get_screen('irc_chat').add_channel_tab(user.split('!')[0], msg)
+                return
 
-            # # Check to see if they're sending me a private message
-            # if channel == self.nickname:
-            #     msg = "It isn't nice to whisper!  Play nice with the group."
-            #     self.msg(user, msg)
-            #     return
-            #
-            # # Otherwise check to see if it is a message directed at me
-            # if msg.startswith(self.nickname + ":"):
-            #     msg = "%s: I am a log bot" % user
-            #     self.msg(channel, msg)
-            #     Logger.info("IRC: <%s> %s" % (self.nickname, msg))
+                # Check to see if they're sending me a private message
+                #
+                # # Otherwise check to see if it is a message directed at me
+                # if msg.startswith(self.nickname + ":"):
+                #     msg = "%s: I am a log bot" % user
+                #     self.msg(channel, msg)
+                #     Logger.info("IRC: <%s> %s" % (self.nickname, msg))
 
     def on_usr_joined(self, channel, callback):
         channel = channel.lower()
@@ -182,6 +184,7 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         Logger.info("IRC: %s is now known as %s" % (old_nick, new_nick))
 
     def who(self, channel):
+        """Called to send WHO command for a channel."""
         channel = channel.lower()
         d = defer.Deferred()
         if channel not in self._whocallback:
@@ -192,6 +195,7 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         return d
 
     def irc_RPL_WHOREPLY(self, prefix, params):
+        """This will get called when the bot sees someone do an action."""
         channel = params[1].lower().strip('#')
         if channel not in self._whocallback:
             return
@@ -200,6 +204,7 @@ class IRCClient(irc.IRCClient, protocol.Protocol):
         n.append(params)
 
     def irc_RPL_ENDOFWHO(self, prefix, params):
+        """Print all unhandled replies, for debugging."""
         channel = params[1].lower().strip('#')
         if channel not in self._whocallback:
             return

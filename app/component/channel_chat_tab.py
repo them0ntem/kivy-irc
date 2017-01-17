@@ -1,10 +1,7 @@
-from __future__ import print_function
-
 from math import ceil
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.properties import ObjectProperty, Logger, NumericProperty, DictProperty
 from kivymd.bottomsheet import MDListBottomSheet
@@ -40,14 +37,11 @@ class ChannelChatTab(MDTab):
         Clock.schedule_once(self.__post_init__)
 
     def __post_init__(self, *args):
-        print(self.ids)
         self.irc_message.disabled = True
         self.irc_message_send_btn.disabled = True
         self.irc_message._hint_lbl.text = 'Connecting...'
 
     def update_irc_message_text(self, dt):
-        print(self.irc_message)
-        print("update_irc_message_text")
         self.irc_message.text = ''
         self.irc_message.on_focus()
 
@@ -80,6 +74,7 @@ class ChannelChatTab(MDTab):
                 font_style='Subhead',
             )
         )
+        self.app.connection.who(self.text).addCallback(self.who_callback)
         Logger.info("IRC: %s -> %s" % (user, 'joined'))
 
     def on_usr_left(self, user, channel):
@@ -89,6 +84,7 @@ class ChannelChatTab(MDTab):
                 font_style='Subhead',
             )
         )
+        self.app.connection.who(self.text).addCallback(self.who_callback)
         Logger.info("IRC: %s <- %s" % (user, 'left'))
 
     def on_usr_quit(self, user, quit_message):
@@ -98,9 +94,12 @@ class ChannelChatTab(MDTab):
                 font_style='Subhead',
             )
         )
+        self.app.connection.who(self.text).addCallback(self.who_callback)
+
         Logger.info("IRC: %s <- %s" % (user, quit_message))
 
     def nick_details(self, nick_list_item):
+        self.app.connection.signedOn()
         nick_item_data = self.nick_data[nick_list_item.text]
         bs = MDListBottomSheet()
         bs.add_item("Whois ({})".format(nick_list_item.text), lambda x: x)
@@ -125,8 +124,7 @@ class ChannelChatTab(MDTab):
         Logger.info("IRC: <%s> -> nicks -> %s" % (self.text, nick_list))
 
     def __post_connection__(self, connection):
-        connection.on_joined(self.text, self.__post_joined__)
-        connection.join(self.text)
+        connection.join_channel(self.text, self.__post_joined__)
 
     def __post_joined__(self, connection):
         self.app.connection.who(self.text).addCallback(self.who_callback)
