@@ -1,9 +1,9 @@
 #: import sm kivy.uix.screenmanager
 #: import MDTextField kivymd.textfields.MDTextField
 #: import TwoLineListItem kivymd.list.TwoLineListItem
-#: import ChannelChatTab app.component.channel_chat_tab
 #: import SettingScreen app.component.setting_screen
 #: import ChatScreen app.component.chat_screen
+#: import StatusTab app.component.status_tab
 
 <ChannelChatTab>:
     msg_list:msg_list
@@ -84,6 +84,40 @@
                 size: 4 * dp(24), dp(40)
                 pos_hint: {'center_x': 0.5, 'center_y': 0.6}
                 on_release: root.send_message()
+
+<StatusTab>:
+    msg_list:msg_list
+    irc_action:irc_action
+    irc_action_send_btn:irc_action_send_btn
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        ScrollView:
+            padding: 10
+            size_hint_y: 0.9
+            scroll_wheel_distance: dp(114)
+            bar_width: dp(4)
+            MDList:
+                id: msg_list
+        GridLayout:
+            cols: 2
+            size_hint_y: 0.1
+            spacing: 20
+            padding: 40, 0
+            MDTextField:
+                id: irc_action
+                valign: 'bottom'
+                message: "chat here! you can also use commands, like /JOIN or /HELP"
+                message_mode: "on_focus"
+                on_text_validate: root.send_action()
+            MDRaisedButton:
+                id: irc_action_send_btn
+                text: "Send"
+                opposite_colors: True
+                size: 4 * dp(24), dp(40)
+                pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+                on_release: root.send_action()
+
 <ChatScreen>:
     name: 'irc_chat'
     tab_panel: tab_panel
@@ -91,6 +125,9 @@
     MDTabbedPanel:
         id: tab_panel
         tab_display_mode:'text'
+        StatusTab:
+            name: 'status'
+            text: 'Status'
 
 <SettingScreen>:
     name: 'settings'

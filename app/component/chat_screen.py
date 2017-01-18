@@ -30,6 +30,7 @@ class MultiLineListItem(BaseListItem):
 class ChatScreen(Screen):
     app = ObjectProperty(None)
     nick_data = DictProperty()
+    connection = ObjectProperty(None)
 
     def __init__(self, **kw):
         super(ChatScreen, self).__init__(**kw)
@@ -37,23 +38,23 @@ class ChatScreen(Screen):
         Clock.schedule_once(self.__post_init__)
 
     def __post_init__(self, *args):
-        for channel in self.app.channel:
-            self.tab_panel.add_widget(
-                ChannelChatTab(
-                    name=channel,
-                    text=channel
-                )
-            )
+        pass
 
     def __post_connection__(self, connection):
+        self.connection = connection
+
         for tab in self.tab_panel.ids.tab_manager.screens:
             tab.__post_connection__(connection)
 
     def __post_joined__(self, connection):
-        for tab in self.tab_panel.ids.tab_manager.screens:
-            tab.__post_joined__(connection)
+        pass
 
-    def add_channel_tab(self, name, msg):
+    def add_channel_tab(self, name):
+        channel = ChannelChatTab(name=name, text=name)
+        self.tab_panel.add_widget(channel)
+        channel.__post_joined__(self.connection)
+
+    def add_private_tab(self, name, msg):
         self.tab_panel.add_widget(
             PrivateChatTab(
                 name=name,

@@ -37,9 +37,9 @@ class ChannelChatTab(MDTab):
         Clock.schedule_once(self.__post_init__)
 
     def __post_init__(self, *args):
-        self.irc_message.disabled = True
-        self.irc_message_send_btn.disabled = True
-        self.irc_message._hint_lbl.text = 'Connecting...'
+        self.irc_message._hint_lbl.text = '@' + self.app.config.get('irc', 'nickname')
+        self.app.connection.on_privmsg(self.text, self.on_privmsg)
+        self.app.connection.on_usr_action(self.text, self.on_usr_action)
 
     def update_irc_message_text(self, dt):
         self.irc_message.text = ''
@@ -67,42 +67,38 @@ class ChannelChatTab(MDTab):
         )
         Logger.info("IRC: <%s> %s" % (user, msg))
 
-    def on_usr_joined(self, user, channel):
-        self.msg_list.add_widget(
-            MultiLineListItem(
-                text="[color=9C27B0]" + user + "[/color] has joined #" + self.text,
-                font_style='Subhead',
+    def on_usr_action(self, user, channel, quit_message, action):
+        if action == 0:
+            self.msg_list.add_widget(
+                MultiLineListItem(
+                    text="[color=9C27B0]" + user + "[/color] has joined #" + self.text,
+                    font_style='Subhead',
+                )
             )
-        )
-        self.app.connection.who(self.text).addCallback(self.who_callback)
-        Logger.info("IRC: %s -> %s" % (user, 'joined'))
-
-    def on_usr_left(self, user, channel):
-        self.msg_list.add_widget(
-            MultiLineListItem(
-                text="[color=9C27B0]" + user + "[/color] has left #" + self.text,
-                font_style='Subhead',
+            Logger.info("IRC: %s -> %s" % (user, 'joined'))
+        elif action == 1:
+            self.msg_list.add_widget(
+                MultiLineListItem(
+                    text="[color=9C27B0]" + user + "[/color] has left #" + self.text,
+                    font_style='Subhead',
+                )
             )
-        )
-        self.app.connection.who(self.text).addCallback(self.who_callback)
-        Logger.info("IRC: %s <- %s" % (user, 'left'))
-
-    def on_usr_quit(self, user, quit_message):
-        self.msg_list.add_widget(
-            MultiLineListItem(
-                text="[color=9A2FB0]" + user + "[/color] has quit &bl;" + quit_message + "&bt;",
-                font_style='Subhead',
+            Logger.info("IRC: %s <- %s" % (user, 'left'))
+        elif action == 2:
+            self.msg_list.add_widget(
+                MultiLineListItem(
+                    text="[color=9A2FB0]" + user + "[/color] has quit &bl;" + quit_message + "&bt;",
+                    font_style='Subhead',
+                )
             )
-        )
+            Logger.info("IRC: %s <- %s" % (user, 'quit'))
         self.app.connection.who(self.text).addCallback(self.who_callback)
-
-        Logger.info("IRC: %s <- %s" % (user, quit_message))
 
     def nick_details(self, nick_list_item):
         self.app.connection.signedOn()
         nick_item_data = self.nick_data[nick_list_item.text]
         bs = MDListBottomSheet()
-        bs.add_item("Whois ({})".format(nick_list_item.text), lambda x: x)
+        bs.add_item("WHOIS ({})".format(nick_list_item.text), lambda x: x)
         bs.add_item("{} ({}@{})".format(nick_item_data[7].split(' ')[1],
                                         nick_item_data[3],
                                         nick_item_data[2]), lambda x: x)
@@ -124,14 +120,7 @@ class ChannelChatTab(MDTab):
         Logger.info("IRC: <%s> -> nicks -> %s" % (self.text, nick_list))
 
     def __post_connection__(self, connection):
-        connection.join_channel(self.text, self.__post_joined__)
+        pass
 
     def __post_joined__(self, connection):
-        self.app.connection.who(self.text).addCallback(self.who_callback)
-        self.irc_message.disabled = False
-        self.irc_message_send_btn.disabled = False
-        self.irc_message._hint_lbl.text = '@' + self.app.config.get('irc', 'nickname')
-        self.app.connection.on_privmsg(self.text, self.on_privmsg)
-        self.app.connection.on_usr_joined(self.text, self.on_usr_joined)
-        self.app.connection.on_usr_left(self.text, self.on_usr_left)
-        self.app.connection.on_usr_quit(self.on_usr_quit)
+        connection.who(self.text).addCallback(self.who_callback)
