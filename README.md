@@ -8,6 +8,7 @@ App for you to connect to IRC World!
 ## Screenshots
 
 <img src="/screenshot.png" />
+<img src="/screenshot1.png" />
 
 ## Used libraries
 * [Kivy](https://github.com/kivy/kivy)
