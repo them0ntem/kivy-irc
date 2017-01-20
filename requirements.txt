@@ -1,0 +1,9 @@
+constantly==15.1.0
+Cython==0.25.2
+incremental==16.10.1
+Kivy==1.9.2.dev0
+Kivy-Garden==0.1.4
+kivymd==0.1.2
+requests==2.12.4
+Twisted==16.6.0
+zope.interface==4.3.3
